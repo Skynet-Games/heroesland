@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity 0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+contract HLSToken is ERC20, Ownable {
+    event MinterAdded(address indexed _minterAddr);
+    event MinterRemoved(address indexed _minterAddr);
+
+    mapping (address => bool ) public minter;
+
+    address[] private minterList;
+    
+    constructor() ERC20("HLS Token", "HLS") {
+        //add owner to minterList
+        addMinter(msg.sender);
+    }
+
+    modifier onlyMinter() {
+        require(minter[msg.sender], "Only-minter");
+        _;
+    }
+
+    function mint(address to, uint256 amount) external onlyMinter{
+        _mint(to, amount);
+    }
+
+    function burn(uint256 amount) public virtual {
+        _burn(msg.sender, amount);
+    }
+
+    function addMinter(address _minterAddr) public onlyOwner{
+        require(!minter[_minterAddr], "Is minter");
+        minterList.push(_minterAddr);
+        minter[_minterAddr] = true;
+        emit MinterAdded(_minterAddr);
+    }
+
+    function removeMinter(address _minterAddr) external onlyOwner{
+        require(minter[_minterAddr], "Not minter");
+        minter[_minterAddr] = false;
+        emit MinterRemoved(_minterAddr);
+        
+        uint256 i = 0;
+        address _minter;
+        while (i < minterList.length) {
+            _minter = minterList[i];
+            if (!minter[_minter]) {
+                minterList[i] = minterList[minterList.length - 1];
+                delete minterList[minterList.length - 1];
+                minterList.pop();
+            } else {
+                i++;
+            }
+        }
+    }
+
+    function getMinters() external view returns (address[] memory){
+        return minterList;
+    }
+    
+}
